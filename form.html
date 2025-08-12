@@ -1,0 +1,234 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Datos Fiscales</title>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f7f9fc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 700px;
+            width: 100%;
+            padding: 40px;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #2d3748;
+            font-size: 2rem;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        p {
+            text-align: center;
+            color: #4a5568;
+            margin-bottom: 20px;
+        }
+        #provider {
+            color: #4c51bf;
+            font-weight: 600;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            color: #2d3748;
+            font-weight: 500;
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            color: #2d3748;
+            background: #f7fafc;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+        input:focus, textarea:focus {
+            border-color: #4c51bf;
+            outline: none;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+        button {
+            display: block;
+            margin: 30px auto 0;
+            padding: 14px 28px;
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #ffffff;
+            background: linear-gradient(90deg, #4c51bf, #6b7280);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 81, 191, 0.3);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+            }
+            h1 {
+                font-size: 1.5rem;
+            }
+            button {
+                font-size: 1rem;
+                padding: 12px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Por favor, completa tus datos fiscales</h1>
+	<p>Te recordamos que los datos deben coincidir con tu Constancia de Situación Fiscal</p>
+        <p>Proveedor: <span id="provider"></span></p>
+        <div class="form-group">
+            <label for="rfc">RFC:</label>
+            <input type="text" id="rfc" required>
+        </div>
+	<div class="form-group">
+            <label for="nombre_o_razon_social">Nombre o Razón Social:</label>
+            <input type="text" id="nombre_o_razon_social" required>
+        </div>
+	<div class="form-group">
+            <label for="CP">Código Postal:</label>
+            <input type="text" id="CP" required>
+        </div>
+	<div class="form-group">
+            <label for="regimen">Régimen Fiscal:</label>
+            <select id="regimen" required>
+                <option value="" disabled selected>Seleccionar</option>
+                <option value="601 General de Ley Personas Morales">601 General de Ley Personas Morales</option>
+                <option value="603 Personas Morales con Fines no Lucrativos">603 Personas Morales con Fines no Lucrativos</option>
+                <option value="605 Sueldos y Salarios e Ingresos Asimilados a Salarios">605 Sueldos y Salarios e Ingresos Asimilados a Salarios</option>
+                <option value="612 Personas Físicas con Actividades Empresariales y Profesionales">612 Personas Físicas con Actividades Empresariales y Profesionales</option>
+                <option value="616 Sin obligaciones fiscales">616 Sin obligaciones fiscales</option>
+                <option value="626 Régimen Simplificado de Confianza (RESICO)">626 Régimen Simplificado de Confianza (RESICO)</option>
+            </select>
+        </div>
+ 	<div class="form-group">
+            <label for="uso">Uso de CFDI:</label>
+            <select id="uso" required>
+                <option value="" disabled selected>Seleccionar</option>
+                <option value="G03 Gastos en General">G03 Gastos en General</option>
+                <option value="D01 Honorarios Médicos, Dentales  y Gastos Hospitalarios">D01 Honorarios Médicos, Dentales  y Gastos Hospitalarios</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" required>
+        </div>
+          <button onclick="submitForm()">Enviar</button>
+    </div>
+
+    <script>
+        const provider = localStorage.getItem('selectedProvider');
+        document.getElementById('provider').textContent = provider || 'None';
+
+        function submitForm() {
+            const rfc = document.getElementById('rfc').value;
+            const nombre_o_razon_social = document.getElementById('nombre_o_razon_social').value;
+	    const CP = document.getElementById('CP').value;
+	    const regimen = document.getElementById('regimen').value;
+            const uso = document.getElementById('uso').value;
+	    const email = document.getElementById('email').value;
+
+            if (!rfc ||!nombre_o_razon_social ||!CP ||!regimen ||!uso || !email) {
+                alert('Faltan datos por completar, por favor llena todos los campos');
+                return;
+            }
+
+            const data = {
+                provider: provider,
+                rfc: rfc,
+		nombre_o_razon_social: nombre_o_razon_social,
+		CP: CP,
+		regimen: regimen,
+		uso: uso,
+                email: email,
+                timestamp: new Date().toISOString()
+            };
+
+            fetch('https://script.google.com/macros/s/AKfycbw0U2sML-4JqFfApCeMsw_OLKcsYGWDgj9dLUBATRPigqM9qfH2dbcDbgiRUdUMJi1eDA/exec', {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(() => {
+                localStorage.setItem('formData', JSON.stringify(data));
+                window.location.href = 'confirmation.html';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again.');
+            });
+        }
+    </script>
+</body>
+</html>
